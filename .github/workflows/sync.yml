@@ -1,0 +1,40 @@
+name: Upstream Sync
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # 每天 UTC 时间 0点（北京时间早8点）自动运行
+  workflow_dispatch:    # 允许你需要的时候手动点击运行
+
+jobs:
+  sync_latest_from_upstream:
+    name: Sync latest commits from upstream repo
+    runs-on: ubuntu-latest
+    if: ${{ github.event.repository.fork }}
+
+    steps:
+      # 步骤1：检出你的代码
+      - name: Checkout target repo
+        uses: actions/checkout@v3
+
+      # 步骤2：同步上游变更
+      - name: Sync upstream changes
+        id: sync
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
+        with:
+          upstream_sync_repo: ngosang/trackerslist
+          upstream_sync_branch: master
+          target_sync_branch: master
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }} # 自动使用 GitHub 令牌
+          test_mode: false
+
+      # 步骤3：检查是否更新成功
+      - name: New commits found
+        if: steps.sync.outputs.has_new_commits == 'true'
+        run: echo "New commits were found to sync."
+
+      - name: No new commits
+        if: steps.sync.outputs.has_new_commits == 'false'
+        run: echo "There were no new commits."
